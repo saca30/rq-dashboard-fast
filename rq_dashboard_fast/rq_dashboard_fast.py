@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from redis import Redis
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -45,6 +46,7 @@ class RedisQueueDashboard(FastAPI):
         templates_directory = package_directory / "templates"
         self.templates = Jinja2Templates(directory=templates_directory)
         self.redis_url = redis_url
+        self.redis_instance = Redis.from_url(self.redis_url)
         self.protocol = protocol
 
         self.rq_dashboard_version = "0.4.1"
@@ -76,7 +78,7 @@ class RedisQueueDashboard(FastAPI):
         @self.get("/workers", response_class=HTMLResponse)
         async def read_workers(request: Request):
             try:
-                worker_data = get_workers(self.redis_url)
+                worker_data = get_workers(self.redis_instance)
 
                 active_tab = "workers"
 
@@ -100,7 +102,7 @@ class RedisQueueDashboard(FastAPI):
         @self.get("/workers/json", response_model=list[WorkerData])
         async def read_workers():
             try:
-                worker_data = get_workers(self.redis_url)
+                worker_data = get_workers(self.redis_instance)
 
                 return worker_data
             except Exception as e:
@@ -112,9 +114,9 @@ class RedisQueueDashboard(FastAPI):
                 )
 
         @self.delete("/queues/{queue_name}")
-        def delete_jobs_in_queue(queue_name: str):
+        def delete_jobs_for_queue(queue_name: str):
             try:
-                deleted_ids = delete_jobs_for_queue(queue_name, self.redis_url)
+                deleted_ids = delete_jobs_for_queue(queue_name, self.redis_instance)
                 return deleted_ids
             except Exception as e:
                 logger.exception("An error occurred while deleting jobs in queue:", e)
@@ -125,7 +127,7 @@ class RedisQueueDashboard(FastAPI):
         @self.get("/queues", response_class=HTMLResponse)
         async def read_queues(request: Request):
             try:
-                queue_data = get_job_registry_amount(self.redis_url)
+                queue_data = get_job_registry_amount(self.redis_instance)
 
                 active_tab = "queues"
 
@@ -151,7 +153,7 @@ class RedisQueueDashboard(FastAPI):
         @self.get("/queues/json", response_model=list[QueueRegistryStats])
         async def read_queues():
             try:
-                queue_data = get_job_registry_amount(self.redis_url)
+                queue_data = get_job_registry_amount(self.redis_instance)
 
                 return queue_data
             except Exception as e:
@@ -166,7 +168,7 @@ class RedisQueueDashboard(FastAPI):
             page: int = Query(1),
         ):
             try:
-                job_data = get_jobs(self.redis_url, queue_name, state, page=page)
+                job_data = get_jobs(self.redis_instance, queue_name, state, page=page)
 
                 active_tab = "jobs"
 
@@ -194,7 +196,7 @@ class RedisQueueDashboard(FastAPI):
             page: int = Query(1),
         ):
             try:
-                job_data = get_jobs(self.redis_url, queue_name, state, page=page)
+                job_data = get_jobs(self.redis_instance, queue_name, state, page=page)
 
                 return job_data
             except Exception as e:
@@ -204,7 +206,7 @@ class RedisQueueDashboard(FastAPI):
         @self.get("/job/{job_id}", response_model=JobDataDetailed)
         async def get_job_data(job_id: str, request: Request):
             try:
-                job = get_job(self.redis_url, job_id)
+                job = get_job(self.redis_instance, job_id)
 
                 active_tab = "job"
 
@@ -228,15 +230,16 @@ class RedisQueueDashboard(FastAPI):
         @self.delete("/job/{job_id}")
         def delete_job(job_id: str):
             try:
-                delete_job_id(self.redis_url, job_id=job_id)
+                delete_job_id(self.redis_instance, job_id=job_id)
             except Exception as e:
                 logger.exception("An error occurred while deleting a job:", e)
                 raise HTTPException("An error occurred while deleting a job:", e)
-                @self.get("/export")
+                
+        
         @self.get("/charts", response_class=HTMLResponse)
         async def read_queues(request: Request):
             try:
-                queue_data = get_job_registry_amount(self.redis_url)
+                queue_data = get_job_registry_amount(self.redis_instance)
 
                 active_tab = "queues"
 
@@ -257,7 +260,7 @@ class RedisQueueDashboard(FastAPI):
                 raise HTTPException(
                     "An error occurred reading queues data template:", e
                 )
-
+        @self.get("/export")
         def export():
             try:
                 queue_data = asyncio.run(read_queues())

@@ -19,10 +19,7 @@ class JobData(BaseModel):
     created_at: datetime
 
 
-class JobDataDetailed(BaseModel):
-    id: str
-    name: str
-    created_at: datetime
+class JobDataDetailed(JobData):
     enqueued_at: datetime | None
     ended_at: datetime | None
     result: Any
@@ -44,17 +41,17 @@ logger = logging.getLogger(__name__)
 
 
 def get_job_registrys(
-    redis_url: str,
+    redis: Redis,
     queue_name: str = "all",
     state: str = "all",
     page: int = 1,
     per_page: int = 10,
 ) -> List[QueueJobRegistryStats]:
     try:
-        redis = Redis.from_url(redis_url)
+
         scheduler = Scheduler(connection=redis, queue_name=queue_name)
 
-        queues = get_queues(redis_url)
+        queues = get_queues(redis)
         result = []
 
         start_index = (page - 1) * per_page
@@ -187,10 +184,10 @@ def get_job_registrys(
 
 
 def get_jobs(
-    redis_url: str, queue_name: str = "all", state: str = "all", page: int = 1
+    redis: Redis, queue_name: str = "all", state: str = "all", page: int = 1
 ) -> list[QueueJobRegistryStats]:
     try:
-        job_stats = get_job_registrys(redis_url, queue_name, state, page)
+        job_stats = get_job_registrys(redis, queue_name, state, page)
         return job_stats
     except Exception as error:
         logger.exception("Error fetching job data: ", error)
@@ -199,9 +196,8 @@ def get_jobs(
         )
 
 
-def get_job(redis_url: str, job_id: str) -> JobDataDetailed:
+def get_job(redis: Redis, job_id: str) -> JobDataDetailed:
     try:
-        redis = Redis.from_url(redis_url)
         job = Job.fetch(job_id, connection=redis)
 
         return JobDataDetailed(
@@ -219,9 +215,8 @@ def get_job(redis_url: str, job_id: str) -> JobDataDetailed:
         raise HTTPException(status_code=500, detail=str("Error fetching job: ", error))
 
 
-def delete_job_id(redis_url: str, job_id: str):
+def delete_job_id(redis: Redis, job_id: str):
     try:
-        redis = Redis.from_url(redis_url)
         job = Job.fetch(job_id, connection=redis)
         if job:
             job.delete()

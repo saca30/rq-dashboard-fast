@@ -17,9 +17,8 @@ class WorkerData(BaseModel):
     queues: list[str]
 
 
-def get_workers(redis_url: str) -> list[WorkerData]:
+def get_workers(redis: Redis) -> list[WorkerData]:
     try:
-        redis = Redis.from_url(redis_url)
         workers = Worker.all(connection=redis)
         result = []
 

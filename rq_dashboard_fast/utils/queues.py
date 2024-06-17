@@ -20,10 +20,8 @@ class QueueRegistryStats(BaseModel):
 logger = logging.getLogger(__name__)
 
 
-def get_queues(redis_url: str) -> list[Queue]:
+def get_queues(redis: Redis) -> list[Queue]:
     try:
-        redis = Redis.from_url(redis_url)
-
         queues = Queue.all(connection=redis)
 
         return queues
@@ -35,9 +33,9 @@ def get_queues(redis_url: str) -> list[Queue]:
         )
 
 
-def get_job_registry_amount(redis_url: str) -> list[QueueRegistryStats]:
+def get_job_registry_amount(redis: Redis) -> list[QueueRegistryStats]:
     try:
-        queues = get_queues(redis_url)
+        queues = get_queues(redis)
         result = []
         for queue in queues:
             finished_jobs = len(queue.finished_job_registry.get_job_ids())
@@ -64,10 +62,9 @@ def get_job_registry_amount(redis_url: str) -> list[QueueRegistryStats]:
         )
 
 
-def delete_jobs_for_queue(queue_name, redis_url) -> list[str]:
+def delete_jobs_for_queue(queue_name, redis: Redis) -> list[str]:
     try:
-        redis = Redis.from_url(redis_url)
-
+        
         queue = Queue(queue_name, connection=redis)
 
         result = queue.empty()
