@@ -13,29 +13,6 @@
       const host = window.location.host;
       const prefix = '{{ prefix }}';
       const baseurl = protocol + '://' + host + prefix;
-      function showNotification(message) {
-        const notification = document.createElement('div');
-        notification.className = 'notification';
-        notification.textContent = message;
-
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-          document.body.removeChild(notification);
-        }, 3000);
-      }
-
-      function showErrorNotification(message) {
-        const errorNotification = document.createElement('div');
-        errorNotification.className = 'error-notification';
-        notification.textContent = message;
-
-        document.body.appendChild(errorNotification);
-
-        setTimeout(() => {
-          document.body.removeChild(errorNotification);
-        }, 3000);
-      }
 
       function toggleAutorefresh() {
         autoRefreshEnabled = !autoRefreshEnabled;

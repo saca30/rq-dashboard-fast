@@ -6,6 +6,10 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from starlette.staticfiles import StaticFiles
 
+from io import StringIO, BytesIO
+import pandas
+import asyncio
+
 from rq_dashboard_fast.utils.jobs import (
     JobDataDetailed,
     QueueJobRegistryStats,
@@ -17,6 +21,7 @@ from rq_dashboard_fast.utils.queues import (
     QueueRegistryStats,
     delete_jobs_for_queue,
     get_job_registry_amount,
+    convert_queue_data_to_json
 )
 from rq_dashboard_fast.utils.workers import WorkerData, get_workers
 
@@ -228,6 +233,31 @@ class RedisQueueDashboard(FastAPI):
                 logger.exception("An error occurred while deleting a job:", e)
                 raise HTTPException("An error occurred while deleting a job:", e)
                 @self.get("/export")
+        @self.get("/charts", response_class=HTMLResponse)
+        async def read_queues(request: Request):
+            try:
+                queue_data = get_job_registry_amount(self.redis_url)
+
+                active_tab = "queues"
+
+                protocol = request.url.scheme
+
+                return self.templates.TemplateResponse(
+                    "charts.html",
+                    {
+                        "request": request,
+                        "active_tab": active_tab,
+                        "prefix": prefix,
+                        "rq_dashboard_version": self.rq_dashboard_version,
+                        "protocol": protocol,
+                    },
+                )
+            except Exception as e:
+                logger.exception("An error occurred reading queues data template:", e)
+                raise HTTPException(
+                    "An error occurred reading queues data template:", e
+                )
+
         def export():
             try:
                 queue_data = asyncio.run(read_queues())
