@@ -312,3 +312,25 @@ class RedisQueueDashboard(FastAPI):
             except Exception as e:
                 logger.exception("An error occurred while exporting:", e)
                 raise HTTPException("An error occurred while exporting:", e)
+        @self.get("/charts", response_class=HTMLResponse)
+        async def read_queues(request: Request):
+            try:
+                active_tab = "queues"
+
+                protocol = request.url.scheme
+
+                return self.templates.TemplateResponse(
+                    "charts.html",
+                    {
+                        "request": request,
+                        "active_tab": active_tab,
+                        "prefix": prefix,
+                        "rq_dashboard_version": self.rq_dashboard_version,
+                        "protocol": protocol,
+                    },
+                )
+            except Exception as e:
+                logger.exception("An error occurred reading queues data template:", e)
+                raise HTTPException(
+                    "An error occurred reading queues data template:", e
+                )
